@@ -20,7 +20,6 @@ createCovMatrix<-function(xVal,yVal=NULL,covFunc,...){
 #   covMat<-matrix(0,length(xVal),length(xVal))
 #   covMat[indexMat]<-covValues
 
-  
   if(is.null(yVal)){
     covMat<-matrix(0,length(xVal),length(xVal))
     for(i in 1:length(xVal)){
@@ -29,14 +28,14 @@ createCovMatrix<-function(xVal,yVal=NULL,covFunc,...){
       } 
     }
   }else {
-    covMat<-matrix(0,length(yVal),length(xVal))
+    covMat<-matrix(0,nrow=length(yVal),ncol=length(xVal))
     for(i in 1:length(yVal)){  # rows 
       for(j in 1:length(xVal)){ # cols
         covMat[i,j]<-covFunc(x1=yVal[i],x2=xVal[j],...)
       } 
     }
-    colnames(covMat)<-paste("xVal",1:length(xVal))
-    rownames(covMat)<-paste("yVal",1:length(yVal))
+    colnames(covMat)<-paste("xVal",round(xVal,3))
+    rownames(covMat)<-paste("yVal",round(yVal,3))
   }
   return(covMat)
 }
@@ -69,14 +68,65 @@ plotGP<-function(drawMatrix){
   }
 }
 
+meanWages<-function(x){
+  y<-14*tanh(x+2.8)
+  return(y)
+}
 
 
 
-
-draw<-sampleGP(noDraw=20,xVal=seq(-6,6,length.out=100),covFunc=SqrExpCov,lengthScale=2,sigma=1,func=sin)
-draw<-sampleGP(noDraw=20,xVal=seq(-6,6,length.out=100),covFunc=SqrExpCov,lengthScale=2,sigma=1,func=sin,onlyPara=T)
+#draw<-sampleGP(noDraw=20,xVal=seq(-6,6,length.out=100),covFunc=SqrExpCov,lengthScale=2,sigma=1,func=sin)
+#draw<-sampleGP(noDraw=20,xVal=seq(-6,6,length.out=100),covFunc=SqrExpCov,lengthScale=2,sigma=1,func=sin,onlyPara=T)
 #round(draw$covMat,4)
-image(draw$covMat)
-plotGP(drawMatrix=draw$draws)
+#image(draw$covMat)
+#plotGP(drawMatrix=draw$draws)
 
-draw<-sampleGP(noDraw=20,xVal=seq(-6,6,length.out=100),covFunc=SqrExpCov)
+# data:
+wages<-read.delim(file="Gaussian processes/CanadianWages2.csv",sep=" ")
+# standardize data:
+wages$age<-scale(wages$age)
+plot(wages$age,wages$logWage,pch=20,ylim=c(10,17),col="blue")
+# calculate posterior
+
+# prior:
+# let l=1 and sigma=1 (change those later)
+# assume sigmaError to be sd of data
+sigmaError<-sd(wages$logWage)
+
+# prior mean function:
+plot(wages$age,wages$logWage,pch=20,ylim=c(10,17),,xlim=c(-1.7,2.3),col="blue",xlab="age",ylab="log(wages)")
+curve(expr=meanWages,from=-1.7,to=2.3,ylim=c(10,15),add=TRUE,lwd=3)
+
+# posterior mean
+# grid of xValues
+xGrid<-seq(-1.5,2.2,length=30)
+
+meanXgrid<-as.matrix(meanFunc(xValues=xGrid,func=meanWages))
+xKxGrid<-createCovMatrix(xVal=wages$age,yVal=xGrid,covFunc=SqrExpCov,sigma=1)
+sqrtKy<-sqrt(createCovMatrix(xVal=wages$age,covFunc=SqrExpCov,sigma=1)+sigmaError*diag(1,nrow=dim(wages)[1]))
+yDiff<-wages$logWage-meanFunc(xValues=wages$age,func=meanWages)
+#fBar<-xKxGrid%*%sqrtKy%*%wages$logWage
+fBar<-meanXgrid+xKxGrid%*%sqrtKy%*%wages$logWage
+#plot(x=wages$age,y=meanFunc(xValues=wages$age,func=meanWages),type="l")
+#plot(x=xGrid,y=meanXgrid,type="l")
+graphics.off()
+plot(x=xGrid,y=fBar,type="o")
+
+
+
+
+temp3<-createCovMatrix(xVal=xGrid,yVal=wages$age,covFunc=SqrExpCov)
+temp2<-createCovMatrix(xVal=wages$age,yVal=xGrid,covFunc=SqrExpCov)
+temp1<-createCovMatrix(xVal=wages$age,covFunc=SqrExpCov)
+temp4<-createCovMatrix(xVal=xGrid,covFunc=SqrExpCov)
+dim(temp2)
+dim(temp3)
+dim(temp1)
+dim(temp4)
+
+
+
+
+
+
+
