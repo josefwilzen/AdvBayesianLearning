@@ -13,17 +13,30 @@ SqrExpCov<-function(x1,x2,sigma=1,lengthScale=1){
 }
 
 
-createCovMatrix<-function(xVal,covFunc,...){
+createCovMatrix<-function(xVal,yVal=NULL,covFunc,...){
   index<-1:length(xVal)
 #   indexMat<-as.matrix(expand.grid(index,index))
 #   covValues<-covFunc(x1=indexMat[,1],x2=indexMat[,2],...)
 #   covMat<-matrix(0,length(xVal),length(xVal))
 #   covMat[indexMat]<-covValues
-  covMat<-matrix(0,length(xVal),length(xVal))
-  for(i in 1:length(xVal)){
-    for(j in 1:length(xVal)){
-      covMat[i,j]<-covFunc(x1=xVal[i],x2=xVal[j],...)
-    } 
+
+  
+  if(is.null(yVal)){
+    covMat<-matrix(0,length(xVal),length(xVal))
+    for(i in 1:length(xVal)){
+      for(j in 1:length(xVal)){
+        covMat[i,j]<-covFunc(x1=xVal[i],x2=xVal[j],...)
+      } 
+    }
+  }else {
+    covMat<-matrix(0,length(yVal),length(xVal))
+    for(i in 1:length(yVal)){  # rows 
+      for(j in 1:length(xVal)){ # cols
+        covMat[i,j]<-covFunc(x1=yVal[i],x2=xVal[j],...)
+      } 
+    }
+    colnames(covMat)<-paste("xVal",1:length(xVal))
+    rownames(covMat)<-paste("yVal",1:length(yVal))
   }
   return(covMat)
 }
@@ -55,6 +68,10 @@ plotGP<-function(drawMatrix){
     lines(x=as.numeric(colnames(drawMatrix)),y=drawMatrix[i,])
   }
 }
+
+
+
+
 
 draw<-sampleGP(noDraw=20,xVal=seq(-6,6,length.out=100),covFunc=SqrExpCov,lengthScale=2,sigma=1,func=sin)
 draw<-sampleGP(noDraw=20,xVal=seq(-6,6,length.out=100),covFunc=SqrExpCov,lengthScale=2,sigma=1,func=sin,onlyPara=T)
