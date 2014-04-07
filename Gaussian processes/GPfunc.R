@@ -108,17 +108,17 @@ posteriorDist<-function(xGrid,priorMean,obsData,covFunc,sigmaError,...){
   fBar<-meanXgrid+xKxGrid%*%sqrtKy%*%yDiff
   
   # posterior covariance:
-  temp1<-qr.solve(createCovMatrix(xVal=wages$age,covFunc=SqrExpCov)+((sigmaError)^2)*diag(1,nrow=dim(wages)[1]))
-  temp2<-createCovMatrix(xVal=wages$age,yVal=xGrid,covFunc=SqrExpCov)
-  temp3<-createCovMatrix(xVal=xGrid,yVal=wages$age,covFunc=SqrExpCov)
-  temp4<-createCovMatrix(xVal=xGrid,covFunc=SqrExpCov)
+  temp1<-qr.solve(createCovMatrix(xVal=x,covFunc=covFunc,...)+((sigmaError)^2)*diag(1,nrow=dim(obsData)[1]))
+  temp2<-createCovMatrix(xVal=x,yVal=xGrid,covFunc=covFunc,...)
+  temp3<-createCovMatrix(xVal=xGrid,yVal=x,covFunc=covFunc,...)
+  temp4<-createCovMatrix(xVal=xGrid,covFunc=covFunc,...)
   posteriorCov<-temp4-temp2%*%temp1%*%temp3
   res<-list(meanVal=fBar,covMat=posteriorCov,xVal=xGrid,sigmaError=sigmaError,obsData=obsData)
   return(res)
 }
 
 
-plotTheoreticalProbBand<-function(postDist,predictiveMean=FALSE,quan=c(0.025,0.975),plotLim=c(10,15),plotData=FALSE,...){
+plotTheoreticalProbBand<-function(postDist,predictiveMean=TRUE,quan=c(0.025,0.975),plotLim=c(10,15.5),plotData=TRUE,overlay=TRUE,...){
   varVect<-diag(postDist$covMat)
   meanVect<-postDist$meanVal
   obsData<-postDist$obsData
@@ -126,23 +126,56 @@ plotTheoreticalProbBand<-function(postDist,predictiveMean=FALSE,quan=c(0.025,0.9
   sigmaError<-postDist$sigmaError
   borders<-qnorm(quan)
   bands<-matrix(0,2,length(meanVect))
+  predBands<-matrix(0,2,length(meanVect))
   if(predictiveMean){
-    varVect<-varVect+sigmaError^2
+    varVectPred<-varVect+sigmaError^2
+    predBands[1,]<-postDist$meanVal+borders[1]*sqrt(varVectPred)  # lower
+    predBands[2,]<-postDist$meanVal+borders[2]*sqrt(varVectPred)  # upper
   }
   bands[1,]<-postDist$meanVal+borders[1]*sqrt(varVect)  # lower
   bands[2,]<-postDist$meanVal+borders[2]*sqrt(varVect)  # upper
   
-  if(plotData){
-    plot(x=obsData[,2],y=obsData[,1],ylim=plotLim,col="blue",...)
+  if(plotData&overlay){
+    plot(x=obsData[,2],y=obsData[,1],ylim=plotLim,xlim=c(min(x),max(x)),col="grey",...)
+    lines(x=x,y=meanVect,lwd=3)
+    lines(x=x,y=bands[1,],col="red",lwd=2)
+    lines(x=x,y=bands[2,],col="red",lwd=2)
+    lines(x=x,y=predBands[1,],col="blue",lwd=2)
+    lines(x=x,y=predBands[2,],col="blue",lwd=2)
+#     legend("bottomright",
+#            c("mean","prob. intervals","predictive intervals"), 
+#            col=c("black","red","blue"),horiz=FALSE,lty = c(1, 1, 1),lwd=c(3,2,2))
+#     legend(-1, 1.9, c("sin", "cos", "tan"), col = c(3, 4, 6),
+#            , lty = c(1, 1, 1),
+#             bg = "gray90")
+    
+  }else if(plotData){
+    plot(x=obsData[,2],y=obsData[,1],ylim=plotLim,xlim=c(min(x),max(x)),col="blue",...)
     lines(x=x,y=meanVect,lwd=3)
     lines(x=x,y=bands[1,],col="red",lwd=2)
     lines(x=x,y=bands[2,],col="red",lwd=2)
   }else{
-    plot(x=x,y=meanVect,ylim=plotLim,type="l",lwd=3,...)
+    plot(x=x,y=meanVect,ylim=plotLim,xlim=c(min(x),max(x)),type="l",lwd=3,...)
     lines(x=x,y=bands[1,],col="red")
     lines(x=x,y=bands[2,],col="red")
   }
 }
 
 
+marginalLikelihood<-function(obsData,meanFunc,covFunc,sigmaError,...){
+  y<-obsData[,1]  
+  x<-obsData[,2]
+  meanDiff<-as.matrix(meanFunc(x)-y)
+  covMat<-createCovMatrix(xVal=x,covFunc=covFunc,...)+(sigmaError^2)*diag(length(x))
+  margLike<- -0.5*t(meanDiff)%*%covMat%*%meanDiff-0.5*log(det(covMat))-0.5*length(x)*log(2*pi)
+  return(margLike)
+}
 
+# marginalLikelihood<-function(...,obsData,meanFunc,covFunc,sigmaError){
+#   y<-obsData[,1]  
+#   x<-obsData[,2]
+#   meanDiff<-as.matrix(meanFunc(x)-y)
+#   covMat<-createCovMatrix(xVal=x,covFunc=covFunc,...)+(sigmaError^2)*diag(length(x))
+#   margLike<- -0.5*t(meanDiff)%*%covMat%*%meanDiff-0.5*log(det(covMat))-0.5*length(x)*log(2*pi)
+#   return(margLike)
+# }
