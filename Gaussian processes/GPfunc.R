@@ -113,14 +113,15 @@ posteriorDist<-function(xGrid,priorMean,obsData,covFunc,sigmaError,...){
   temp3<-createCovMatrix(xVal=xGrid,yVal=wages$age,covFunc=SqrExpCov)
   temp4<-createCovMatrix(xVal=xGrid,covFunc=SqrExpCov)
   posteriorCov<-temp4-temp2%*%temp1%*%temp3
-  res<-list(meanVal=fBar,covMat=posteriorCov,xVal=xGrid,sigmaError=sigmaError)
+  res<-list(meanVal=fBar,covMat=posteriorCov,xVal=xGrid,sigmaError=sigmaError,obsData=obsData)
   return(res)
 }
 
 
-plotTheoreticalProbBand<-function(postDist,predictiveMean=FALSE,quan=c(0.025,0.975),plotLim=c(10,15),obsData=NULL,...){
+plotTheoreticalProbBand<-function(postDist,predictiveMean=FALSE,quan=c(0.025,0.975),plotLim=c(10,15),plotData=FALSE,...){
   varVect<-diag(postDist$covMat)
   meanVect<-postDist$meanVal
+  obsData<-postDist$obsData
   x<-postDist$xVal
   sigmaError<-postDist$sigmaError
   borders<-qnorm(quan)
@@ -129,17 +130,17 @@ plotTheoreticalProbBand<-function(postDist,predictiveMean=FALSE,quan=c(0.025,0.9
     varVect<-varVect+sigmaError^2
   }
   bands[1,]<-postDist$meanVal+borders[1]*sqrt(varVect)  # lower
-  bands[2,]<-postDist$meanVal+borders[2]*sqrt(varVect)  # 
+  bands[2,]<-postDist$meanVal+borders[2]*sqrt(varVect)  # upper
   
-  if(is.null(obsData)){
-    plot(x=x,y=meanVect,ylim=plotLim,type="l",lwd=3)
-    lines(x=x,y=bands[1,],col="red")
-    lines(x=x,y=bands[2,],col="red")
-  }else{
-    plot(x=obsData[,2],y=obsData[,1],ylim=plotLim,col="blue")
+  if(plotData){
+    plot(x=obsData[,2],y=obsData[,1],ylim=plotLim,col="blue",...)
     lines(x=x,y=meanVect,lwd=3)
     lines(x=x,y=bands[1,],col="red",lwd=2)
     lines(x=x,y=bands[2,],col="red",lwd=2)
+  }else{
+    plot(x=x,y=meanVect,ylim=plotLim,type="l",lwd=3,...)
+    lines(x=x,y=bands[1,],col="red")
+    lines(x=x,y=bands[2,],col="red")
   }
 }
 
