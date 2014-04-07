@@ -55,8 +55,8 @@ sampleGP<-function(noDraw,xVal,covFunc,func=NULL,onlyPara=FALSE,...){
 }
 
 plotGP<-function(drawMatrix){
-  maxVal<-max(drawMatrix)
-  minVal<-min(drawMatrix)
+  maxVal<-max(drawMatrix)+0.5
+  minVal<-min(drawMatrix)-0.5
   noDraws<-dim(drawMatrix)[1]
   if(noDraws==1) {
     plot(x=as.numeric(colnames(drawMatrix)),y=drawMatrix[1,], type="l", xlab="t",ylab="y")
@@ -68,7 +68,51 @@ plotGP<-function(drawMatrix){
   }
 }
 
+
+plotProbBandsGP<-function(drawMatrix,postMean,xGrid,dataPoints=NULL){
+  maxVal<-max(drawMatrix)+0.5
+  minVal<-min(drawMatrix)-0.5
+  noDraws<-dim(drawMatrix)[1]
+  confBands<-apply(X=drawMatrix,MARGIN=2,FUN=quantile,prob=c(0.05,0.95))
+  plot(x=xGrid,y=postMean, type="l", 
+       xlab="t",ylab="y",ylim=c(minVal,maxVal),lwd=3)
+  lines(x=xGrid,y=confBands[1,],col="blue")  # lower
+  lines(x=xGrid,y=confBands[2,],col="blue")  # upper
+}
+
+
+
 meanWages<-function(x){
   y<-14*tanh(x+2.8)
   return(y)
+}
+
+
+posteriorDist<-function(xGrid,priorMean,obsData,covFunc,sigmaError,...){
+  y<-obsData[,1]
+  x<-obsData[,2] 
+  # mean function for new x
+  meanXgrid<-as.matrix(meanFunc(xValues=xGrid,func=priorMean))
+  
+  # the covariance matrix K(X_star,X):
+  xKxGrid<-createCovMatrix(xVal=x,yVal=xGrid,covFunc=covFunc,...)
+  
+  # the inverse K_y = K(X,X)+simga^2*I:
+  sqrtKy<-qr.solve(createCovMatrix(xVal=x,covFunc=covFunc,...)
+                   +((sigmaError)^2)*diag(1,nrow=dim(obsData)[1]))
+  
+  # differnece between obs y and mean of X:
+  yDiff<-y-meanFunc(xValues=x,func=priorMean)
+  
+  # posterior mean:
+  fBar<-meanXgrid+xKxGrid%*%sqrtKy%*%yDiff
+  
+  # posterior covariance:
+  temp1<-qr.solve(createCovMatrix(xVal=wages$age,covFunc=SqrExpCov)+((sigmaError)^2)*diag(1,nrow=dim(wages)[1]))
+  temp2<-createCovMatrix(xVal=wages$age,yVal=xGrid,covFunc=SqrExpCov)
+  temp3<-createCovMatrix(xVal=xGrid,yVal=wages$age,covFunc=SqrExpCov)
+  temp4<-createCovMatrix(xVal=xGrid,covFunc=SqrExpCov)
+  posteriorCov<-temp4-temp2%*%temp1%*%temp3
+  res<-list(meanVal=fBar,covMat=posteriorCov,xVal=xGrid)
+  return(res)
 }
