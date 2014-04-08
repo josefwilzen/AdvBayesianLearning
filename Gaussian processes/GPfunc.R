@@ -8,13 +8,47 @@ meanFunc<-function(xValues,func=NULL){
 SqrExpCov<-function(x1,x2,sigma=1,lengthScale=1){
   if(lengthScale<=0) stop("Values of lengthScale not allowed")
   if(sigma<=0) stop("Values of sigma not allowed")
-  covVal<-(sigma^2)*exp(((x1-x2)^2)/(-2*lengthScale))
+  covVal<-(sigma^2)*exp(((x1-x2)^2)/(-2*lengthScale^2))
   return(covVal)
 }
 
+maternKernel<-function(x1,x2,sigma=1,lengthScale=1){
+  if(lengthScale<=0) stop("Values of lengthScale not allowed")
+  if(sigma<=0) stop("Values of sigma not allowed")
+  #if(nu<=0) stop("Values of nu not allowed")
+  
+  nu<-0.5  # 0.5, 1.5 2.5
+  
+  r<-abs(x1-x2)
+  x<-(sqrt(2*nu)*r)/lengthScale
+  y<-(2^(1-nu)/gamma(nu))*(((sqrt(2*nu)*r)/lengthScale)^nu)*besselI(x=x,nu=nu)
+  return(y)
+}
+
+rationalQuaratic<-function(x1,x2,sigma=1,alpha=1,lengthScale=1){
+  if(lengthScale<=0) stop("Values of lengthScale not allowed")
+  if(sigma<=0) stop("Values of sigma not allowed")
+  if(alpha<=0) stop("Values of alpha not allowed")
+  
+  r<-abs(x1-x2)
+  y<-sigma*(1+r^2/(2*alpha*lengthScale^2))^(-alpha)
+  return(y)
+}
+
+gammaExponential<-function(x1,x2,sigma=1,gamma=1,lengthScale=1){
+  if(lengthScale<=0) stop("Values of lengthScale not allowed")
+  if(sigma<=0) stop("Values of sigma not allowed")
+  if(gamma<=0|gamma>2) stop("Values of gamma not allowed")
+  r<-abs(x1-x2)
+  y<- sigma*exp(-(r/lengthScale)^gamma)
+  return(y)
+}
+
+
+
 
 createCovMatrix<-function(xVal,yVal=NULL,covFunc,...){
-  index<-1:length(xVal)
+  # index<-1:length(xVal)
   #   indexMat<-as.matrix(expand.grid(index,index))
   #   covValues<-covFunc(x1=indexMat[,1],x2=indexMat[,2],...)
   #   covMat<-matrix(0,length(xVal),length(xVal))
@@ -142,9 +176,9 @@ plotTheoreticalProbBand<-function(postDist,predictiveMean=TRUE,quan=c(0.025,0.97
     lines(x=x,y=bands[2,],col="red",lwd=2)
     lines(x=x,y=predBands[1,],col="blue",lwd=2)
     lines(x=x,y=predBands[2,],col="blue",lwd=2)
-#     legend("bottomright",
-#            c("mean","prob. intervals","predictive intervals"), 
-#            col=c("black","red","blue"),horiz=FALSE,lty = c(1, 1, 1),lwd=c(3,2,2))
+    legend("bottomright",
+           c("mean","prob. intervals","predictive intervals"), 
+           col=c("black","red","blue"),horiz=FALSE,lty = c(1, 1, 1),lwd=c(3,2,2))
 #     legend(-1, 1.9, c("sin", "cos", "tan"), col = c(3, 4, 6),
 #            , lty = c(1, 1, 1),
 #             bg = "gray90")
@@ -163,13 +197,42 @@ plotTheoreticalProbBand<-function(postDist,predictiveMean=TRUE,quan=c(0.025,0.97
 
 
 marginalLikelihood<-function(obsData,meanFunc,covFunc,sigmaError,...){
+  if(sigmaError<=0) stop("Value for sigmaError is not allowed!")
   y<-obsData[,1]  
   x<-obsData[,2]
   meanDiff<-as.matrix(meanFunc(x)-y)
   covMat<-createCovMatrix(xVal=x,covFunc=covFunc,...)+(sigmaError^2)*diag(length(x))
-  margLike<- -0.5*t(meanDiff)%*%covMat%*%meanDiff-0.5*log(det(covMat))-0.5*length(x)*log(2*pi)
+  margLike<- -0.5*t(meanDiff)%*%qr.solve(covMat)%*%meanDiff-0.5*log(det(covMat))-0.5*length(x)*log(2*pi)
+  
+  cat("\n part1: ",-0.5*t(meanDiff)%*%qr.solve(covMat)%*%meanDiff, " part2: ",-0.5*log(det(covMat))," part3: ",-0.5*length(x)*log(2*pi),"\n")
+  #if(is.nan(x=log(det(covMat)))) browser()
+  
   return(margLike)
 }
+
+
+optimMarginalLikelihood<-function(para,covFunc,...){
+  paraName<-c("sigmaError",names(unlist(formals(covFunc)[-(1:2)])))
+  otherPara<-as.list(match.call())[-(1:3)]
+  paraList<-vector("list",length(paraName))
+  for(i in 1:length(paraName)){
+    paraList[[i]]<-para[i]
+    names(paraList)[i]<-paraName[i]
+  }
+  allPara<-c(covFunc=covFunc,otherPara,paraList)
+  print(allPara[4:length(allPara)])
+  res<-do.call(marginalLikelihood,allPara)
+  if(res==Inf){
+    res<-100000000
+  }else if(res==-Inf){
+    res<- -100000000
+  }
+  cat("Value: ",as.vector(res),"\n")
+  return(as.vector(res))
+  #return(allPara)
+}
+
+
 
 # marginalLikelihood<-function(...,obsData,meanFunc,covFunc,sigmaError){
 #   y<-obsData[,1]  
