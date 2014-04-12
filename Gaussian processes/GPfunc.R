@@ -242,3 +242,96 @@ optimMarginalLikelihood<-function(para,covFunc,...){
 #   margLike<- -0.5*t(meanDiff)%*%covMat%*%meanDiff-0.5*log(det(covMat))-0.5*length(x)*log(2*pi)
 #   return(margLike)
 # }
+
+
+
+
+SqrExpCovVect<-function(theta,x1,x2){
+  sigma<-theta[1]
+  l<-theta[2:length(theta)]
+  x1<-as.matrix(x1)
+  x2<-as.matrix(x2)
+  M<-diag(l^(-2))
+  y<-sigma^2*exp(-0.5*t(x1-x2)%*%M%*%(x1-x2))
+  # possiblity to add the sigma model term above
+  return(y)
+}
+
+
+covMatrixVect<-function(theta,myData){
+  noObs<-dim(myData)[1]
+  covMat<-matrix(0,noObs,noObs)
+  for(i in 1:noObs){  # over rows 
+    for(j in 1:noObs){  # over cols
+      x1<-t(myData[i,])
+      x2<-t(myData[j,])
+      covMat[i,j]<-SqrExpCovVect(theta=theta,x1=x1,x2=x2)
+      
+    }
+  }
+  return(covMat)
+}
+
+
+SqrExpCovVect2<-function(theta,X1,X2){
+  #browser()
+  sigma<-theta[1]
+  l<-theta[2:length(theta)]
+  X1<-as.matrix(X1)
+  X2<-as.matrix(X2)
+  M<-diag(l^(-2))
+  y<-sigma^2*exp(-0.5*t(X1-X2)%*%M%*%(X1-X2))
+  # possiblity to add the sigma model term above
+  return(y)
+}
+SqrExpCovVect3<-function(x,noXvar,sigma,M,sigmaError=1){
+  x1<-x[1:noXvar]
+  x2<-x[-(1:noXvar)]
+  y<-sigma^2*exp(-0.5*t(x1-x2)%*%M%*%(x1-x2))+sigmaError^2*diag(noXvar)
+  # possiblity to add the sigma model term above
+  return(y)
+}
+
+covMatrixVect2<-function(theta,myData){
+  noObs<-dim(myData)[1]
+  noCols<-dim(myData)[2]
+  covMat<-matrix(0,noObs,noObs)
+  index<-1:noObs
+  matrixIndex<-as.matrix(expand.grid(index,index))
+  allCombin<-cbind(myData[matrixIndex[,1],],myData[matrixIndex[,2],])
+  sigmaError<-theta[1]
+  sigma<-theta[2]
+  l<-theta[2:length(theta)]
+  M<-diag(l^(-2))
+  Y<-apply(X=allCombin,MARGIN=1,FUN=SqrExpCovVect3,noXvar=noCols,sigma=sigma,M=M,sigmaError=sigmaError)
+  covMat[matrixIndex]<-Y
+  return(covMat)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
