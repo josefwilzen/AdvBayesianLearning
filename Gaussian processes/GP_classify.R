@@ -126,16 +126,6 @@ str(modelA)
 glm
 
 
-
-# likelihood:
-likelihoodGPclassify<-function(f,y,LOG=TRUE,...){
-  if(LOG){
-    likelihood<- ifelse(y==1,-log(1+exp(-f)),-f-log(1+exp(-f)))
-  }else{
-    likelihood<-ifelse(y==1,inv.logit(x=f),(1-inv.logit(x=f)))
-  }
-  return(likelihood)
-}
 # log(likelihoodGPclassify(1,y=1,LOG=FALSE))
 # log(likelihoodGPclassify(1,y=-1,LOG=FALSE))
 # likelihoodGPclassify(1,y=1,LOG=TRUE)
@@ -143,14 +133,13 @@ likelihoodGPclassify<-function(f,y,LOG=TRUE,...){
 
 #-----------------------------------------------------------------------------------
 # posterior
-logisticHessian<-function(f,y){
-  W<--Diagonal(x=-likelihoodGPclassify(f=f,y=y,LOG=TRUE)*likelihoodGPclassify(f=f,y=-y,LOG=TRUE))
-  return(W)
-}
-Diagonal
-install.packages("Matrix")
+
+#install.packages("Matrix")
 library(Matrix)
+
 a<-logisticHessian(f=fitted(object=modelA)[1:10],y=heart$chd[1:10])
+logisticGradient(f=fitted(object=modelA)[1:10],y=heart$chd[1:10])
+
 class(a)
 a@x
 attributes(a)
@@ -160,37 +149,123 @@ sqrt(diag(a))
 a<-diag(9,nrow=3)
 sqrt(a)%*%sqrt(a)
 d<-sqrt(a)*sqrt(a)
+a<-as.matrix(testData1[,1:2])
+a<-Matrix(as.matrix(testData1[,1:2]))
+class(a)
+testNew<-covMatrixVect2(theta=c(1,1,1,1),myData=testData1[,1:2])
 
 a.eig <- eigen(a)
 a.sqrt <- a.eig$vectors %*% diag(sqrt(a.eig$values)) %*% solve(a.eig$vectors)
 Matrix(data=)
 all(abs(a@x-sqrt(a@x)*sqrt(a@x))<1e-16)
 
+a<-covMatrixVect2(theta=c(1,1,1,1),myData=testData1[,1:2])
+
 h<-matrix(data=sample(100,size=9),3,3)
 h<-chol(a)
 h
 str(h)
-posteriorMode<-function(K,y,nIter=100,...){
-  noObs<-length(y)
-  f<-rep(0,noObs)
-  for(i in 1:nIter){
-    W<-logisticHessian(f=f,y=y)
-    <-sqrt(diag(W))
-    sqrtW<-Diagonal(sqrt(W@x))
-    diag(noObs)+sqrtW%*%K%*%sqrtW
-    
-  }
-  
-  
-  
-  return()
+
+
+# y<-testData1$chd
+# K<-covMatrixVect2(theta=c(1,1,1,1),myData=testData1[,1:2])
+
+# noObs<-length(y)
+# f<-rep(0,noObs)
+# W<-logisticHessian(f=f,y=y)
+# sqrtW<-Diagonal(x=sqrt(W@x))
+# L<-chol(diag(noObs)+sqrtW%*%K%*%sqrtW)
+# 
+# fGrad<-logisticGradient(f=f,y=y)
+# b<-W%*%f+fGrad
+# sqrtWKb<-sqrtW%*%K%*%b
+# LsolveSqrtWKb<-solve(a=L,b=sqrtWKb)
+# WsqrtLt<-sqrtW%*%t(L)
+# a<-b-solve(a=WsqrtLt,b=LsolveSqrtWKb)
+# f<-K%*%a
+# 
+# str(diag(L))
+# sum(log(diag(L)))
+
+logPosterior<-function(f,y,K){
+  logPost<-sum(likelihoodGPclassify(f=f,y=y))-0.5*t(f)%*%solve(K)%*%f-0.5*det(x=K,log=TRUE)-0.5*length(y)*log(2*pi)  
+  return(as.vector(logPost))
 }
+
+posteriorMode<-function(K,y,nIter=100,tol=c(1e-20,1e-20),f=NULL,adder=0,step=1,...){
+  noObs<-length(y)
+  objectiveFunc<-rep(x=0,length.out=nIter)
+  if(is.null(f)) f<-rep(0,noObs)
+  objectiveFunc[1]<-logPosterior(f=f,y=y,K=K)
+  stopCondition="iter"
+  K<-K+adder*diag(noObs)
+  
+  for(i in 2:nIter){
+    print(i)
+    W<-logisticHessian(f=f,y=y)
+    sqrtW<-Diagonal(x=sqrt(W@x))
+    
+    # try if the Choleski factorization shall be inverted with respect to t()s
+    L<-chol(Diagonal(noObs)+as.matrix(sqrtW%*%K%*%sqrtW))
+    L<-t(L)
+    fGrad<-logisticGradient(f=f,y=y)
+    b<-W%*%f+fGrad*step
+    sqrtWKb<-sqrtW%*%K%*%b
+    print(paste("a: Class of L:   ",as.character(class(L))," rcond:  ",rcond(x=as.matrix(L))))
+    print(paste("b: Class of sqrtWKb:   ",class(sqrtWKb)," rcond:  ",rcond(sqrtWKb)))
+    LsolveSqrtWKb<-solve(a=L,b=sqrtWKb)
+    #LsolveSqrtWKb<-solve(a=L,b=as.vector(sqrtWKb),system="L")
+    WsqrtLt<-sqrtW%*%t(L)
+    print(paste("a: Class of WsqrtLt:   ",class(WsqrtLt)," rcond:  ",rcond(WsqrtLt)))
+    print(paste("b: Class of LsolveSqrtWKb:   ",class(LsolveSqrtWKb)," rcond:  ",rcond(LsolveSqrtWKb)))
+    a<-b-solve(a=WsqrtLt,b=LsolveSqrtWKb)
+    #a<-b-solve(a=WsqrtLt,b=as.vector(LsolveSqrtWKb),system="L")
+    fnew<-K%*%a
+    objectiveFunc[i]<-logPosterior(f=fnew,y=y,K=K)
+    #if(i==4) browser()
+    #browser()
+    if(i>10&abs(objectiveFunc[i]-objectiveFunc[(i-1)])<tol[1]){
+      stopCondition<-"objectiveFunc"
+      break
+    }else if(sum(abs(fnew-f))<tol[2]){
+      stopCondition<-"f"
+      break
+    }
+    f<- fnew
+  }
+  logMargLike<- -0.5*t(a)%*%f+sum(likelihoodGPclassify(f=f,y=y))-sum(log(diag(L)))
+  res<-list(f=as.vector(f),logMargLike=logMargLike,postMode=objectiveFunc[1:i],stopCondition=stopCondition)
+  return(res)
+  #return(f)
+}
+
+
+y<-testData1$chd
+K<-covMatrixVect2(theta=c(1,1,1,1),myData=testData1[,1:2])
+#hej<-posteriorMode(K=K,y=y,nIter=5,f=fitted(modelA))
+hej<-posteriorMode(K=K,y=y,nIter=100,tol=c(1e-100,1e-10),adder=0,f=NULL,step=2)
+hej
+hej$postMode[11]-hej$postMode[10]
+round(hej,3)
 "%*%"
 chol
+
+data(iris)
+iris2<-iris[,c(1,2,5)]
+iris2[,3]<-ifelse(iris2[,3]=="setosa",1,-1)
+
+Kiris<-covMatrixVect2(theta=c(1,2,1,1,1,1),myData=iris[,1:4])
+irisTest<-posteriorMode(K=Kiris,y=iris2[,3],nIter=100,tol=c(1e-100,1e-100),adder=0,f=NULL)
+
 #-----------------------------------------------------------------------------------
 # marginal likelihood
 
-
+logMarginalLikelihood<-function(theta,y,X,fMode,...){
+  W<-logisticHessian(f=f,y=y)
+  sqrtW<-Diagonal(x=sqrt(W@x))
+  det(Diagonal(noObs)+as.matrix(sqrtW%*%K%*%sqrtW),log=TRUE)
+  return()
+}
 
 
 

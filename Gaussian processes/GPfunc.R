@@ -275,6 +275,37 @@ covMatrixVect<-function(theta,myData){
   return(covMat)
 }
 
+# try to speed up with Matrix package
+
+# SqrExpCovVect3<-function(x,noXvar,sigma,M){
+#   #browser()
+#   x1<-x[1:noXvar]
+#   x2<-x[-(1:noXvar)]
+#   y<-sigma^2*exp(-0.5*t(x1-x2)%*%M%*%(x1-x2))
+#   return(y)
+# }
+# 
+# covMatrixVect2<-function(theta,myData){
+#   #browser()
+#   myData<-Matrix(as.matrix(myData))
+#   noObs<-dim(myData)[1]
+#   noCols<-dim(myData)[2]
+#   covMat<-Matrix(0,noObs,noObs)
+#   index<-1:noObs
+#   matrixIndex<-Matrix(as.matrix(expand.grid(index,index)))
+#   allCombin<-cbind(myData[matrixIndex[,1],],myData[matrixIndex[,2],])
+#   sigmaError<-theta[1]
+#   sigma<-theta[2]
+#   l<-theta[3:length(theta)]
+#   M<-Diagonal(x=l^(-2))
+#   Y<-apply(X=allCombin[[1]],MARGIN=1,FUN=SqrExpCovVect3,noXvar=noCols,sigma=sigma,M=as.matrix(M))
+#   covMat[matrixIndex]<-Y
+#   covMat<-covMat+sigmaError^2*diag(noObs)
+#   return(covMat)
+# }
+
+# back up:
+
 SqrExpCovVect3<-function(x,noXvar,sigma,M){
   x1<-x[1:noXvar]
   x2<-x[-(1:noXvar)]
@@ -299,37 +330,32 @@ covMatrixVect2<-function(theta,myData){
   return(covMat)
 }
 
-# back up:
+library(Matrix)
 
-# SqrExpCovVect3<-function(x,noXvar,sigma,M){
-#   x1<-x[1:noXvar]
-#   x2<-x[-(1:noXvar)]
-#   y<-sigma^2*exp(-0.5*t(x1-x2)%*%M%*%(x1-x2))
-#   return(y)
-# }
-
-# covMatrixVect2<-function(theta,myData){
-#   noObs<-dim(myData)[1]
-#   noCols<-dim(myData)[2]
-#   covMat<-matrix(0,noObs,noObs)
-#   index<-1:noObs
-#   matrixIndex<-as.matrix(expand.grid(index,index))
-#   allCombin<-cbind(myData[matrixIndex[,1],],myData[matrixIndex[,2],])
-#   sigmaError<-theta[1]
-#   sigma<-theta[2]
-#   l<-theta[3:length(theta)]
-#   M<-diag(l^(-2))
-#   Y<-apply(X=allCombin,MARGIN=1,FUN=SqrExpCovVect3,noXvar=noCols,sigma=sigma,M=M)
-#   covMat[matrixIndex]<-Y
-#   covMat<-covMat+sigmaError^2*diag(noObs)
-#   return(covMat)
-# }
+# likelihood:
+likelihoodGPclassify<-function(f,y,LOG=TRUE,...){
+  f<-as.vector(f)
+  y<-as.vector(y)
+  if(LOG){
+    likelihood<- ifelse(y==1,-log(1+exp(-f)),-f-log(1+exp(-f)))
+  }else{
+    likelihood<-ifelse(y==1,inv.logit(x=f),(1-inv.logit(x=f)))
+  }
+  return(likelihood)
+}
 
 
 
+logisticHessian<-function(f,y){
+  W<--Diagonal(x=-likelihoodGPclassify(f=f,y=y,LOG=TRUE)*likelihoodGPclassify(f=f,y=-y))
+  return(W)
+}
 
-
-
+logisticGradient<-function(f,y){
+  tVect<-(y+1)/2
+  G<-tVect-likelihoodGPclassify(f=f,y=y,LOG=TRUE)*likelihoodGPclassify(f=f,y=-y,LOG=TRUE)
+  return(G)
+}
 
 
 
