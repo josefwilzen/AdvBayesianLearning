@@ -3,7 +3,7 @@ graphics.off()
 setwd("/home/joswi05/Dropbox/Josef/Advanced Bayesian Learning/AdvBayesianLearning/Gaussian processes")
 source("GPfunc.R")
 
-dir()
+#dir()
 # get data!
 
 
@@ -25,6 +25,7 @@ dir()
 #----------------------------------------------------
 library(ggplot2)
 heart<-read.csv(file="SAheart.csv")
+heartGLM<-heart
 heart$chd<-ifelse(heart$chd==0,-1,1)  # change coding of the binary respose to -1/1
 
 
@@ -37,7 +38,9 @@ testData1<-heart[,c(8,10,11)]
 qplot(x=age,y=obesity, color=chd2,data=heart2)
 
 #----------------glm------------------------------------
-modelA<-glm(formula=chd~age+obesity,data=heart,family=binomial(link = "logit"))
+
+
+modelA<-glm(formula=chd~age+obesity,data=heartGLM,family=binomial(link = "logit"))
 summary(modelA)
 modelA$coefficients
 names(heart)
@@ -89,18 +92,77 @@ p
 
 
 
+system.time(test1Theta<-covMatrixVect(theta=c(0,1,1,1),myData=testData1[,1:2]))
+#system.time(test1<-covMatrixVect(theta=c(1,1,1),myData=testData1[,1:2]))
+#system.time(test2<-covMatrixVect2(theta=c(1,1,1,1),myData=testData1[,1:2]))
+system.time(test2Theta<-covMatrixVect2(theta=c(0,1,1,1),myData=testData1[,1:2]))
+all(test1Theta==test2Theta)
 
-system.time(test1<-covMatrixVect(theta=c(1,1,1,1),myData=testData1[,1:2]))
-system.time(test2<-covMatrixVect2(theta=c(1,1,1,1),myData=testData1[,1:2]))
-all(test1==test2)
 
 #-----------------------------------------------------------------------------------
 # laplace approx:
 #-----------------------------------------------------------------------------------
+install.packages("VGAM")
+library(VGAM)
+library(boot)
+logit
+inv.logit(x=)
+str(binomial(link="logit"))
+testX<-t(as.matrix(testData1[5,1:2]))
+theta=c(1,0,1,1)
+SqrExpCovVect(theta=c(1,0,1,1),x1=testX,x2=testX)
+theta
+mu<-0
+
+pnorm(0,mean=mu,sd=sum(theta[1:2]))
+
+
+round(inv.logit(as.matrix(testData1[,1:2])%*%as.matrix(c(-3,3))),4)
+dim(t(testData1[,1:2]))
+modelA$coefficients
+inv.logit(as.matrix(cbind(1,testData1[,1:2]))%*%modelA$coefficients)
+fitted(modelA)
+str(modelA)
+glm
+
+
+
+# likelihood:
+likelihoodGPclassify<-function(f,y,LOG=TRUE,...){
+  if(LOG){
+    likelihood<- ifelse(y==1,-log(1+exp(-f)),-f-log(1+exp(-f)))
+  }else{
+    likelihood<-ifelse(y==1,inv.logit(x=f),(1-inv.logit(x=f)))
+  }
+  return(likelihood)
+}
+# log(likelihoodGPclassify(1,y=1,LOG=FALSE))
+# log(likelihoodGPclassify(1,y=-1,LOG=FALSE))
+# likelihoodGPclassify(1,y=1,LOG=TRUE)
+# likelihoodGPclassify(1,y=-1,LOG=TRUE)
 
 #-----------------------------------------------------------------------------------
 # posterior
+logisticHessian<-function(f,y){
+  W<-diag(-likelihoodGPclassify(f=f,y=y,LOG=TRUE)*likelihoodGPclassify(f=f,y=-y,LOG=TRUE))
+  return(W)
+}
 
+logisticHessian(f=fitted(object=modelA),y=heart$chd)
+
+posteriorMode<-function(K,y,nIter=100,...){
+  noObs<-length(y)
+  f<-rep(0,noObs)
+  for(i in 1:nIter){
+    
+    
+    
+  }
+  
+  
+  
+  return()
+}
 
 
 #-----------------------------------------------------------------------------------
