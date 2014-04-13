@@ -144,18 +144,40 @@ likelihoodGPclassify<-function(f,y,LOG=TRUE,...){
 #-----------------------------------------------------------------------------------
 # posterior
 logisticHessian<-function(f,y){
-  W<-diag(-likelihoodGPclassify(f=f,y=y,LOG=TRUE)*likelihoodGPclassify(f=f,y=-y,LOG=TRUE))
+  W<--Diagonal(x=-likelihoodGPclassify(f=f,y=y,LOG=TRUE)*likelihoodGPclassify(f=f,y=-y,LOG=TRUE))
   return(W)
 }
+Diagonal
+install.packages("Matrix")
+library(Matrix)
+a<-logisticHessian(f=fitted(object=modelA)[1:10],y=heart$chd[1:10])
+class(a)
+a@x
+attributes(a)
+b<-sqrt(a)%*%sqrt(a)
+all(b==a)
+sqrt(diag(a))
+a<-diag(9,nrow=3)
+sqrt(a)%*%sqrt(a)
+d<-sqrt(a)*sqrt(a)
 
-logisticHessian(f=fitted(object=modelA),y=heart$chd)
+a.eig <- eigen(a)
+a.sqrt <- a.eig$vectors %*% diag(sqrt(a.eig$values)) %*% solve(a.eig$vectors)
+Matrix(data=)
+all(abs(a@x-sqrt(a@x)*sqrt(a@x))<1e-16)
 
+h<-matrix(data=sample(100,size=9),3,3)
+h<-chol(a)
+h
+str(h)
 posteriorMode<-function(K,y,nIter=100,...){
   noObs<-length(y)
   f<-rep(0,noObs)
   for(i in 1:nIter){
-    
-    
+    W<-logisticHessian(f=f,y=y)
+    <-sqrt(diag(W))
+    sqrtW<-Diagonal(sqrt(W@x))
+    diag(noObs)+sqrtW%*%K%*%sqrtW
     
   }
   
@@ -163,8 +185,8 @@ posteriorMode<-function(K,y,nIter=100,...){
   
   return()
 }
-
-
+"%*%"
+chol
 #-----------------------------------------------------------------------------------
 # marginal likelihood
 

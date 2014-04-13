@@ -299,8 +299,31 @@ covMatrixVect2<-function(theta,myData){
   return(covMat)
 }
 
+# back up:
 
+# SqrExpCovVect3<-function(x,noXvar,sigma,M){
+#   x1<-x[1:noXvar]
+#   x2<-x[-(1:noXvar)]
+#   y<-sigma^2*exp(-0.5*t(x1-x2)%*%M%*%(x1-x2))
+#   return(y)
+# }
 
+# covMatrixVect2<-function(theta,myData){
+#   noObs<-dim(myData)[1]
+#   noCols<-dim(myData)[2]
+#   covMat<-matrix(0,noObs,noObs)
+#   index<-1:noObs
+#   matrixIndex<-as.matrix(expand.grid(index,index))
+#   allCombin<-cbind(myData[matrixIndex[,1],],myData[matrixIndex[,2],])
+#   sigmaError<-theta[1]
+#   sigma<-theta[2]
+#   l<-theta[3:length(theta)]
+#   M<-diag(l^(-2))
+#   Y<-apply(X=allCombin,MARGIN=1,FUN=SqrExpCovVect3,noXvar=noCols,sigma=sigma,M=M)
+#   covMat[matrixIndex]<-Y
+#   covMat<-covMat+sigmaError^2*diag(noObs)
+#   return(covMat)
+# }
 
 
 
