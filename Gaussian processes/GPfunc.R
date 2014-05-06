@@ -17,7 +17,7 @@ maternKernel<-function(x1,x2,sigma=1,lengthScale=1){
   if(sigma<=0) stop("Values of sigma not allowed")
   #if(nu<=0) stop("Values of nu not allowed")
   
-  nu<-0.5  # 0.5, 1.5 2.5
+  nu<-0.5 # 0.5, 1.5 2.5
   
   r<-abs(x1-x2)
   x<-(sqrt(2*nu)*r)/lengthScale
@@ -88,15 +88,14 @@ sampleGP<-function(noDraw,xVal,covFunc,func=NULL,onlyPara=FALSE,...){
   return(res)
 }
 
-plotGP<-function(drawMatrix){
+plotGP<-function(drawMatrix,...){
   maxVal<-max(drawMatrix)+0.5
   minVal<-min(drawMatrix)-0.5
   noDraws<-dim(drawMatrix)[1]
   if(noDraws==1) {
-    plot(x=as.numeric(colnames(drawMatrix)),y=drawMatrix[1,], type="l", xlab="t",ylab="y")
+    plot(x=as.numeric(colnames(drawMatrix)),y=drawMatrix[1,], type="l",...)
   }else{
-    plot(x=as.numeric(colnames(drawMatrix)),y=drawMatrix[1,], type="l", 
-         xlab="t",ylab="y",ylim=c(minVal,maxVal))
+    plot(x=as.numeric(colnames(drawMatrix)),y=drawMatrix[1,], type="l",ylim=c(minVal,maxVal),...)
     for(i in 2:noDraws)
       lines(x=as.numeric(colnames(drawMatrix)),y=drawMatrix[i,])
   }
@@ -222,6 +221,9 @@ optimMarginalLikelihood<-function(para,covFunc,...){
   allPara<-c(covFunc=covFunc,otherPara,paraList)
   print(allPara[4:length(allPara)])
   res<-do.call(marginalLikelihood,allPara)
+  # we want to maximize
+  
+  
   if(res==Inf){
     res<-100000000
   }else if(res==-Inf){

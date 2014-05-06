@@ -6,20 +6,20 @@ source("Gaussian processes/GPfunc.R")
 wages<-read.delim(file="Gaussian processes/CanadianWages2.csv",sep=" ")
 # standardize data:
 wages$age<-scale(wages$age)
-plot(wages$age,wages$logWage,pch=20,ylim=c(10,15.5),col="blue")
+plot(wages$age,wages$logWage,pch=20,ylim=c(10,15.5),col="blue",xlab="age",ylab="log(wages)")
 # calculate posterior
 
 # prior:
 # let l=0.2 and sigma=1 (change those later)
 # assume sigmaError to be sd of data
-priorSigma<-c(0.5,1.5)
-priorLengthScale<-c(0.01,0.5,5)
+priorSigma<-c(2,1.5)
+priorLengthScale<-c(0.1,0.5,5)
 
 sigmaError<-sd(wages$logWage)
 xGrid<-seq(-2,3,length=300)
 draws<-sampleGP(noDraw=30,xVal=xGrid,covFunc=SqrExpCov,func=meanWages,sigma=priorSigma[1],lengthScale=priorLengthScale[1])
 # prior mean function:
-plotGP(draws$draws)
+plotGP(draws$draws,xlab="age",ylab="log(wages)")
 curve(expr=meanWages,from=min(xGrid),to=max(xGrid),ylim=c(10,15),add=TRUE,lwd=4,col="red")
 
 
@@ -44,7 +44,8 @@ curve(expr=meanWages,from=min(xGrid),to=max(xGrid),ylim=c(10,15),add=TRUE,lwd=4,
 # Kernel 1:  Squared Exponential kernel
 #-------------------------------------------------------------
 lowerVal<-0.001
-kernelOptim1<-optim(par=c(1,1,1),fn=optimMarginalLikelihood,method="L-BFGS-B",
+startValues<-c(sigmaError,priorSigma[1],priorLengthScale[1])
+kernelOptim1<-optim(par=startValues,fn=optimMarginalLikelihood,method="L-BFGS-B",
             obsData=wages,meanFunc=meanWages,covFunc=SqrExpCov,
               lower=c(lowerVal,lowerVal,lowerVal),control=list(fnscale=-1),hessian=TRUE)
 
@@ -58,9 +59,8 @@ postSqrExp<-posteriorDist(xGrid=xGrid,
               sigma=SqrExpSigma,lengthScale=SqrExpLengthScale)
 plotTheoreticalProbBand(postDist=postSqrExp,plotLim=c(8,17),predictiveMean=TRUE,plotData=TRUE,
                         main=paste("sigma model=",round(SqrExpSigmaError,3),
-                          "sigma kernel=",round(SqrExpSigma,3),"l=",round(SqrExpLengthScale,3) ,sep=" "),
+                          "  sigma kernel=",round(SqrExpSigma,3),"  l=",round(SqrExpLengthScale,3) ,sep=" "),
                         xlab="Std. age",ylab="log(wages)")
-
 
 #-------------------------------------------------------------
 # Kernel 2: Gamma exponential
@@ -68,7 +68,9 @@ plotTheoreticalProbBand(postDist=postSqrExp,plotLim=c(8,17),predictiveMean=TRUE,
 
 formals(gammaExponential)
 lowerVal<-0.01
-kernelOptim2<-optim(par=c(1,1,1,1),fn=optimMarginalLikelihood,method="L-BFGS-B",
+gamma<-1
+startValues2<-c(sigmaError,priorSigma[1],gamma,priorLengthScale[1])
+kernelOptim2<-optim(par=startValues2,fn=optimMarginalLikelihood,method="L-BFGS-B",
                  obsData=wages,meanFunc=meanWages,covFunc=gammaExponential,
                  lower=c(lowerVal,lowerVal,lowerVal,lowerVal),upper=c(Inf,Inf,1.99,Inf),control=list(fnscale=-1),hessian=TRUE)
 
@@ -95,29 +97,25 @@ plotTheoreticalProbBand(postDist=postGamma,plotLim=c(8,17),predictiveMean=TRUE,p
 
 formals(maternKernel)
 lowerVal<-0.01
-kernelOptim2<-optim(par=c(1,1,5),fn=optimMarginalLikelihood,method="L-BFGS-B",
-                    obsData=wages,meanFunc=meanWages,covFunc=maternKernel,
-                    lower=c(lowerVal,lowerVal,lowerVal,lowerVal),control=list(fnscale=-1),hessian=TRUE)
-
-
-kernelOptim2<-optim(par=c(1,1,1,1),fn=optimMarginalLikelihood,method="BFGS",
-                    obsData=wages,meanFunc=meanWages,covFunc=maternKernel,control=list(fnscale=-1),hessian=TRUE)
+startValues3<-c(sigmaError,priorSigma[1],priorLengthScale[1])
+startValues3<-c(1,1,2)  # funkar tillsammans med v=1.5 och v=2.5
+startValues3<-c(0.5,0.5,1)
+kernelOptim2<-optim(par=startValues3,fn=optimMarginalLikelihood,method="L-BFGS-B",
+                    obsData=wages,meanFunc=meanWages,covFunc=maternKernel,lower=c(lowerVal,lowerVal,lowerVal,lowerVal),control=list(fnscale=-1),hessian=TRUE)
 
 gammaSigmaError<-kernelOptim2$par[1]
 gammaSigma<-kernelOptim2$par[2]
-gammaGamma<-kernelOptim2$par[3]
-gammaLengthScale<-kernelOptim2$par[4]
+gammaLengthScale<-kernelOptim2$par[3]
 
-postGamma<-posteriorDist(xGrid=xGrid,
-                         priorMean=meanWages,obsData=wages,covFunc=gammaExponential,sigmaError=gammaSigmaError,
-                         sigma=gammaSigma,lengthScale=gammaLengthScale,gamma=gammaGamma)
+postGamma<-posteriorDist(xGrid=xGrid,priorMean=meanWages,obsData=wages,covFunc=maternKernel,sigmaError=gammaSigmaError,
+                         sigma=gammaSigma,lengthScale=gammaLengthScale)
 plotTheoreticalProbBand(postDist=postGamma,plotLim=c(8,17),predictiveMean=TRUE,plotData=TRUE,
-                        main=paste("sigma model=",round(gammaSigmaError,3),
-                                   "sigma kernel=",round(gammaSigma,3),"gamma=",round(gammaGamma,3),"l=",round(gammaLengthScale,3) ,sep=" "),
-                        xlab="Std. age",ylab="log(wages)")
+                        main=paste("sigma model=",round(gammaSigmaError,3),"sigma kernel=",round(gammaSigma,3)),"l=",round(gammaLengthScale,3) ,sep=" ",
+                        xlab="Std. age",ylab="log(wages)",quan=c(0.025,0.975))
 
+plotTheoreticalProbBand(postDist=postGamma,plotLim=c(8,17),predictiveMean=TRUE,plotData=TRUE)
 
-
+str(postGamma)
 #-------------------------------------------------------------
 
 

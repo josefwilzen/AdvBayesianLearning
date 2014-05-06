@@ -31,11 +31,17 @@ heart$chd<-ifelse(heart$chd==0,-1,1)  # change coding of the binary respose to -
 
 head(heart)
 heart2<-heart
-heart2$chd2<-as.factor(heart2[,11])
+heart2$chd<-as.factor(heart2[,11])
 
 names(heart)
 testData1<-heart[,c(8,10,11)]
-qplot(x=age,y=obesity, color=chd2,data=heart2)
+qplot(x=age,y=obesity, color=chd,data=heart2)
+
+g<-ggplot(heart2,aes(age,obesity))
+g+geom_point(aes(color=chd),size=6,alpha=0.8)+theme_bw()
+stat_contour
+#example(stat_contour)
+# add contuor to this plot!
 
 #----------------glm------------------------------------
 
@@ -44,12 +50,63 @@ modelA<-glm(formula=chd~age+obesity,data=heartGLM,family=binomial(link = "logit"
 summary(modelA)
 modelA$coefficients
 names(heart)
-heart
-as.matrix(modelA$coefficients)
+data(volcano)
+library(reshape2) # for melt
+# volcano3d <- melt(volcano)
+# names(volcano3d) <- c("x", "y", "z")
+# v <- ggplot(volcano3d, aes(x, y, z = z))
+# v + stat_contour()
 
+chd<-heart2$chd
+glmPlot<-cbind(heartGLM[,c(8,10)],fitted=modelA$fitted.values,chd=heart2$chd)
+#names(glmPlot)[1:3]<-c("x", "y", "z")
+p<-ggplot(glmPlot[,1:3],aes(x=age,y=obesity,z=fitted))
+p+geom_point(aes(color=chd),size=6,alpha=0.8)+theme_bw()+stat_contour()
+
+p+geom_point()+theme_bw()+stat_contour()+geom_tile()
+
+p+geom_point()+theme_bw()+geom_tile()
+
+p+geom_point(aes(color=chd),size=6,alpha=0.8)+theme_bw()+stat_contour(mapping=aes(x=age,y=obesity,z=fitted),data=glmPlot[,1:3])
+p+geom_point(aes(color=chd),size=6,alpha=0.8)+theme_bw()+stat_density2d()
+p+geom_point(aes(color=chd),size=6,alpha=0.8)+theme_bw()+stat_contour()
+
+
+
+summary(fitted(modelA))
+as.matrix(modelA$coefficients)
+str(modelA)
 hist(heart2$age,30)
 hist(heart2$obesity,30)
 quantile(heart2$obesity,probs=seq(0,1,0.1))
+
+summary(heart$age)
+summary(heart$obesity)
+ageRange<-seq(min(heart$age),max(heart$age),length=100)
+obesityRange<-seq(min(heart$obesity),max(heart$obesity),length=100)
+library(boot)
+xyz<-expand.grid(ageRange,obesityRange)
+xyz<-cbind(constant=1,xyz,z=0)
+names(xyz)[2:3]<-c("x","y")
+for(i in 1:dim(xyz)[1]){
+  xyz[i,4]<-inv.logit(as.matrix(xyz[i,1:3])%*%as.matrix(modelA$coefficients))
+}
+
+library(RColorBrewer)
+library(reshape2)
+library(ggplot2)
+
+myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
+j<-ggplot(data=xyz[,2:4],mapping=aes(x,y,z=z))
+j+geom_tile()+scale_fill_gradientn(colours = myPalette(100))
+j+stat_contour(bins=10,binwidth=2)
+j+geom_tile(aes(fill = z)) + stat_contour()
+j+geom_tile(aes(fill = z)) + stat_contour()+geom_point(mapping=aes(x=age,y=obesity),data=glmPlot)
+#qplot(x, y, z = z, data = xyz[,2:4], geom = "contour")
+xyz$z
+str(j)
+
+example(stat_contour)
 
 set.seed(123144)
 a<-sample(heart2$obesity,size=100,prob=density(heart2$obesity,n=462)$y)
