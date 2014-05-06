@@ -36,16 +36,40 @@ gibbsHierarchialPoisson<-function(lambdaStart,betaStart,obsData,mySeed=NULL,nObs
 
 
 
-vb<-function(){
-  
-  
-  
-  return()
+vbParameterEstimate<-function(obsData,myB0=2,nIter=20,psi=1,alpha=1,theta=5){
+  sumX<-sum(obsData)
+  n<-length(obsData)
+  aLambda<-sumX+alpha
+  aBeta<-psi
+  myB<-myB0
+  for(i in 1:nIter){
+    bLambda<-n+myB
+    myLambda<-aLambda/bLambda
+    bBeta<-theta+myLambda
+    myB<-aBeta/bBeta
+  }
+  result<-matrix(0,2,2)
+  colnames(result)<-c("lambda","beta")
+  rownames(result)<-c("a","b")
+  result[,1]<-c(aLambda,bLambda)
+  result[,2]<-c(aBeta,bBeta)
+  return(result)
 }
 
 
+vbDraws<-function(paraMatrix,noDraws=1000,mySeed=NULL){
+  result<-matrix(0,noDraws,2)
+  colnames(result)<-c("lambda","beta")
+  set.seed(mySeed)
+  result[,1]<-rgamma(n=noDraws,shape=paraMatrix[1,1],rate=paraMatrix[2,1])
+  result[,2]<-rgamma(n=noDraws,shape=paraMatrix[1,2],rate=paraMatrix[2,2])
+  return(result)
+}
 
-
+vb<-function(obsData,noDraws=1000,mySeed=NULL,...){
+  para<-vbParameterEstimate(obsData=obsData,...)
+  return(vbDraws(paraMatrix=para,noDraws=noDraws,mySeed=mySeed))
+}
 
 
 

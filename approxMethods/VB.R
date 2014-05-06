@@ -40,8 +40,20 @@ plot(density(test[,2]),main="beta")
 par(mfrow=c(1,1))
 example(stat_density2d)
 
+#-------------------------------------------------------------------------
+# c)
+
+test4<-vb(obsData=dataVect,mySeed=20939)
+pl<-ggplot(data=as.data.frame(test4),aes(x=lambda,y=beta))+geom_point()+theme_bw()+
+  geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))
+print(pl)
+
+plVB1<-ggplot(as.data.frame(test4), aes(lambda)) +geom_density(alpha = 0.2)+theme_bw()
+plVB2<-ggplot(as.data.frame(test4), aes(beta)) +geom_density(alpha = 0.2)+theme_bw()
+multiplot(plVB1,plVB2)
 
 
+#-------------------------------------------------------------------------
 #  ABC
 function(x){return(sum(log(x)))
 
