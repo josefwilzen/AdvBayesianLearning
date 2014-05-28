@@ -49,14 +49,14 @@ testGibbs<-data.frame(test,Method="Gibbs")
 testTotal<-rbind(testGibbs,testVB)
 
 totLambda<-ggplot(testTotal, aes(x=lambda, color=Method)) + geom_density()+theme_bw()+xlab(expression(lambda))
-totBeta<-ggplot(testTotal, aes(x=beta, color=Method)) + geom_density()+theme_bw()+xlab(expression(lambda))
+totBeta<-ggplot(testTotal, aes(x=beta, color=Method)) + geom_density()+theme_bw()+xlab(expression(beta))
 grid.arrange(totLambda,totBeta,ncol=2)
 
 #ggplot(df, aes(x=rating, fill=cond)) + geom_density(alpha=.3)
 
 pl<-ggplot(data=as.data.frame(testTotal),aes(x=lambda,y=beta,col=Method))+geom_point()+theme_bw()+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))
 print(pl)
-testTotal
+
 
 #-------------------------------------------------------------------------
 #  ABC
@@ -80,28 +80,57 @@ grid.arrange(pReject1,pReject2,pReject, ncol=2)
 summary(test2[,3])
 
 
-rejection1<-likeFreeRejectionSample2(obsData=dataVect,tol=0,nObs=1000,statistic=mean,mySeed=2344)
-rejection2<-likeFreeRejectionSample2(obsData=dataVect,tol=0,nObs=1000,statistic=sum,mySeed=3444)
-rejection3<-likeFreeRejectionSample2(obsData=dataVect,tol=0,nObs=1000,statistic=median,mySeed=3554)
-rejection4<-likeFreeRejectionSample2(obsData=dataVect,tol=0,nObs=1000,statistic=range,mySeed=34006)
+# compare methods:
+testVB<-data.frame(test4,Method="VB")
+testGibbs<-data.frame(test,Method="Gibbs")
+testRejectionSampler<-data.frame(test2[,1:2],Method="Rejection")
+testTotal<-rbind(testVB,testGibbs,testRejectionSampler)
 
-plRejection1<-ggplot(data=as.data.frame(rejection1),aes(x=lambda,y=beta))+geom_point()+theme_bw()+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))
-plRejection2<-ggplot(data=as.data.frame(rejection2),aes(x=lambda,y=beta))+geom_point()+theme_bw()+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))
-plRejection3<-ggplot(data=as.data.frame(rejection3),aes(x=lambda,y=beta))+geom_point()+theme_bw()+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))
-plRejection4<-ggplot(data=as.data.frame(rejection4),aes(x=lambda,y=beta))+geom_point()+theme_bw()+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))
-grid.arrange(plRejection1,plRejection2,plRejection3,plRejection4, ncol=2)
+aggregate(x=testTotal[,1],by=list(testTotal[,3]),FUN=summary)
+aggregate(x=testTotal[,2],by=list(testTotal[,3]),FUN=summary)
+
+totLambda<-ggplot(testTotal, aes(x=lambda, color=Method)) + geom_density()+theme_bw()+xlab(expression(lambda))
+totBeta<-ggplot(testTotal, aes(x=beta, color=Method)) + geom_density()+theme_bw()+xlab(expression(beta))
+grid.arrange(totLambda,totBeta,ncol=2)
+
+pl<-ggplot(data=as.data.frame(testTotal),aes(x=lambda,y=beta,col=Method))+geom_point()+theme_bw()+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))
+print(pl)
 
 
+
+# compare statistic
+
+rejection1<-likeFreeRejectionSample2(obsData=dataVect,tol=1,nObs=1000,statistic=mean,mySeed=2344)
+rejection2<-likeFreeRejectionSample2(obsData=dataVect,tol=1,nObs=1000,statistic=var,mySeed=3444)
+rejection3<-likeFreeRejectionSample2(obsData=dataVect,tol=1,nObs=1000,statistic=median,mySeed=3554)
+rejection4<-likeFreeRejectionSample2(obsData=dataVect,tol=1,nObs=1000,statistic=range,mySeed=34006)
+
+plRejection1<-ggplot(data=as.data.frame(rejection1),aes(x=lambda,y=beta))+geom_point()+theme_bw()+
+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))+ggtitle("Mean")
+
+plRejection2<-ggplot(data=as.data.frame(rejection2),aes(x=lambda,y=beta))+geom_point()+theme_bw()+
+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))+ggtitle("Variance")
+
+plRejection3<-ggplot(data=as.data.frame(rejection3),aes(x=lambda,y=beta))+geom_point()+theme_bw()+
+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))+ggtitle("Median")
+
+plRejection4<-ggplot(data=as.data.frame(rejection4),aes(x=lambda,y=beta))+geom_point()+theme_bw()+
+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))+ggtitle("Range")
+
+grid.arrange(plRejection1,plRejection3,plRejection2,plRejection4, ncol=2)
+
+
+# compare error tolarence:
 
 rejection5<-likeFreeRejectionSample2(obsData=dataVect,tol=0,nObs=1000,statistic=mean,mySeed=2144)
 rejection6<-likeFreeRejectionSample2(obsData=dataVect,tol=3,nObs=1000,statistic=mean,mySeed=22444)
 rejection7<-likeFreeRejectionSample2(obsData=dataVect,tol=6,nObs=1000,statistic=mean,mySeed=355411)
 rejection8<-likeFreeRejectionSample2(obsData=dataVect,tol=9,nObs=1000,statistic=mean,mySeed=34756)
 
-plRejection5<-ggplot(data=as.data.frame(rejection5),aes(x=lambda,y=beta))+geom_point()+theme_bw()+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))
-plRejection6<-ggplot(data=as.data.frame(rejection6),aes(x=lambda,y=beta))+geom_point()+theme_bw()+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))
-plRejection7<-ggplot(data=as.data.frame(rejection7),aes(x=lambda,y=beta))+geom_point()+theme_bw()+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))
-plRejection8<-ggplot(data=as.data.frame(rejection8),aes(x=lambda,y=beta))+geom_point()+theme_bw()+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))
+plRejection5<-ggplot(data=as.data.frame(rejection5),aes(x=lambda,y=beta))+geom_point()+theme_bw()+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))+ggtitle("Tol: 0")
+plRejection6<-ggplot(data=as.data.frame(rejection6),aes(x=lambda,y=beta))+geom_point()+theme_bw()+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))+ggtitle("Tol: 3")
+plRejection7<-ggplot(data=as.data.frame(rejection7),aes(x=lambda,y=beta))+geom_point()+theme_bw()+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))+ggtitle("Tol: 6")
+plRejection8<-ggplot(data=as.data.frame(rejection8),aes(x=lambda,y=beta))+geom_point()+theme_bw()+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))+ggtitle("Tol: 9")
 grid.arrange(plRejection5,plRejection6,plRejection7,plRejection8, ncol=2)
 
 
@@ -111,9 +140,47 @@ str(testSample)
 
 #--------------------------------------------------------------------------------
 # b)
-a<-likeFreeMCMC(obsData=dataVect,tuning=0.1,statistic=mean,nObs=1000,tol=1,mySeed=2873)
 
-plot(a$parameters[,1],type="l")
-plot(a$parameters[,2],type="l")
-aPlot<-ggplot(data=as.data.frame(a$parameters[,1:2]),aes(x=lambda,y=beta))+geom_point()+theme_bw()+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))
-print(aPlot)
+# bäst hitintills: tuning=0.05 och tol=1
+#a<-likeFreeMCMC(obsData=dataVect,tuning=0.05,statistic=mean,nObs=1000,tol=1,mySeed=28765)
+b<-likeFreeMCMC(obsData=dataVect,tuning=0.05,statistic=mean,nObs=1000,tol=1,mySeed=68285)
+#d<-likeFreeMCMC(obsData=dataVect,tuning=0.05,statistic=mean,nObs=1000,tol=1,mySeed=227655)
+#e<-likeFreeMCMC(obsData=dataVect,tuning=0.05,statistic=mean,nObs=1000,tol=1,mySeed=65334)
+#cat("\n\n\n\n\n")
+
+plot(b$parameters[,1],type="l")
+plot(b$parameters[,2],type="l")
+bPlot<-ggplot(data=as.data.frame(b$parameters[,1:2]),aes(x=lambda,y=beta))+geom_point()+theme_bw()+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))
+print(bPlot)
+
+plot(e$parameters[,1],type="l")
+plot(e$parameters[,2],type="l")
+ePlot<-ggplot(data=as.data.frame(e$parameters[,1:2]),aes(x=lambda,y=beta))+geom_point()+theme_bw()+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))
+print(ePlot)
+
+
+str(b$parameters)
+
+testGibbs<-data.frame(test,Method="Gibbs")
+testABCMCMC<-data.frame(b$parameters[,1:2],Method="ABC MCMC")
+testRejectionSampler<-data.frame(test2[,1:2],Method="Rejection")
+testTotal<-rbind(testGibbs,testABCMCMC,testRejectionSampler)
+
+totLambda<-ggplot(testTotal, aes(x=lambda, color=Method)) + geom_density()+theme_bw()+xlab(expression(lambda))
+totBeta<-ggplot(testTotal, aes(x=beta, color=Method)) + geom_density()+theme_bw()+xlab(expression(beta))
+grid.arrange(totLambda,totBeta,ncol=2)
+
+
+
+testGibbs<-data.frame(test,Method="Gibbs")
+testABCMCMC<-data.frame(b$parameters[,1:2],Method="ABC MCMC")
+testTotal2<-rbind(testGibbs,testABCMCMC)
+
+pl<-ggplot(data=as.data.frame(testTotal2),aes(x=lambda,y=beta,col=Method))+geom_point()+theme_bw()+geom_density2d()+xlab(expression(lambda)) +ylab(expression(beta))
+print(pl)
+
+
+
+
+
+

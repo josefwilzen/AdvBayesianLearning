@@ -114,7 +114,7 @@ likeFreeRejectionSample2<-function(obsData,statistic=sum,nObs=1000,tol=1,psi=1,b
     tempDist<-euclideanDist(x=zStat,y=yStat)
     result[i,]<-c(lambda,beta,count)
     resultData[i,]<-z
-    print(paste("i: ",i," count: ",count,"tempDist: ",tempDist))
+    #print(paste("i: ",i," count: ",count,"tempDist: ",tempDist))
     count<-1 
   }
   if(storeData){
@@ -156,65 +156,50 @@ likeFreeMCMC<-function(obsData,tuning,statistic=sum,nObs=1000,tol=1,psi=1,theta=
   
   for(i in 2:(nObs+1)){
     #if(i==2) browser()
-    
-    parameterProp<-rmvnorm(n=1,mean=resultPara[(i-1),1:2],sigma=varProp)
-    parameterProp<-ifelse(parameterProp<=0,0.000001,parameterProp)
-    
-    lambda<-rgamma(n=1,shape=alpha,rate=parameterProp[,2])
-    z<-rpois(n=10,lambda=lambda)
-    zStat<-statistic(z,...)
-    u<-runif(1)
-    posteriorOld<-posterior(paraVect=resultPara[(i-1),1:2],obsData=obsData,psi=psi,theta=theta,alpha=alpha)
-    posteriorNew<-posterior(paraVect=parameterProp,obsData=obsData,psi=psi,theta=theta,alpha=alpha)
-    
-    propGivenOld<-dmvnorm(x=parameterProp,mean=resultPara[(i-1),1:2],sigma=varProp)
-    oldGivenProp<-dmvnorm(x=resultPara[(i-1),1:2],mean=parameterProp,sigma=varProp)
-    
-    posteriorRatio<-posteriorNew/posteriorOld
-    proposalRatio<-oldGivenProp/propGivenOld
-    
-    cat("posteriorRatio: ",posteriorRatio,"\n")
-    cond1<-posteriorRatio*proposalRatio>=u
-    cond2<-euclideanDist(x=zStat,y=yStat)<=tol
-    
-    cat("cond1: ",cond1,"cond2: ",cond2,"\n")
-    if(cond1&cond2){
-      resultPara[i,1:2]<-parameterProp
-      resultData[i,]<-z
-    }else{
-      resultPara[i,1:2]<-resultPara[(i-1),1:2]
-      resultData[i,]<-resultData[(i-1),]
+    count<-1
+    while(TRUE){
+      
+      parameterProp<-rmvnorm(n=1,mean=resultPara[(i-1),1:2],sigma=varProp)
+      parameterProp<-ifelse(parameterProp<=0,0.000001,parameterProp)
+      
+      lambda<-rgamma(n=1,shape=alpha,rate=parameterProp[,2])
+      z<-rpois(n=10,lambda=lambda)
+      zStat<-statistic(z,...)
+      u<-runif(1)
+      posteriorOld<-posterior(paraVect=resultPara[(i-1),1:2],obsData=obsData,psi=psi,theta=theta,alpha=alpha)
+      posteriorNew<-posterior(paraVect=parameterProp,obsData=obsData,psi=psi,theta=theta,alpha=alpha)
+      
+      propGivenOld<-dmvnorm(x=parameterProp,mean=resultPara[(i-1),1:2],sigma=varProp)
+      oldGivenProp<-dmvnorm(x=resultPara[(i-1),1:2],mean=parameterProp,sigma=varProp)
+      
+      posteriorRatio<-posteriorNew/posteriorOld
+      proposalRatio<-oldGivenProp/propGivenOld
+      
+      #cat("posteriorRatio: ",posteriorRatio,"\n")
+      cond1<-posteriorRatio*proposalRatio>=u
+      cond2<-euclideanDist(x=zStat,y=yStat)<=tol
+      
+      #cat("cond1: ",cond1,"cond2: ",cond2,"\n")
+      
+      if(cond1&cond2){
+        resultPara[i,1:2]<-parameterProp
+        resultPara[i,3]<-count
+        resultPara[i,4]<-1/count
+        resultData[i,]<-z
+        break
+      }
+      count<-count+1
     }
-    
-    # generate the first proposal:
-#     beta<-rgamma(n=1,shape=psi,rate=theta)
-#     lambda<-rgamma(n=1,shape=alpha,rate=beta)
-#     z<-rpois(n=10,lambda=lambda)
-#     zStat<-statistic(z,...)
-#     count<-1
-#     while(euclideanDist(x=zStat,y=yStat)>tol){
-#       beta<-rgamma(n=1,shape=psi,rate=theta)
-#       lambda<-rgamma(n=1,shape=alpha,rate=beta)
-#       z<-rpois(n=n,lambda=lambda)
-#       zStat<-statistic(z,...)
-#       count<-count+1
-#     }
-    tempDist<-euclideanDist(x=zStat,y=yStat)
-    print(paste("i: ",i,"tempDist: ",tempDist))
-    count<-1 
-  }
 
+    #tempDist<-euclideanDist(x=zStat,y=yStat)
+    #print(paste("i: ",i,"tempDist: ",tempDist))
+
+  }
+  cat("tuning parameter: ",tuning,"Acceptance rate: ",mean(resultPara[,4]),"\n")
   res<-list(parameters=resultPara,dataSample=resultData)
 
   return(res)
 }
-
-
-
-
-
-
-
 
 
 
