@@ -17,7 +17,7 @@ maternKernel<-function(x1,x2,sigma=1,lengthScale=1){
   if(sigma<=0) stop("Values of sigma not allowed")
   #if(nu<=0) stop("Values of nu not allowed")
   
-  nu<-0.5 # 0.5, 1.5 2.5
+  nu<-1.5 # 0.5, 1.5 2.5
   
   r<-abs(x1-x2)
   x<-(sqrt(2*nu)*r)/lengthScale
@@ -197,15 +197,21 @@ plotTheoreticalProbBand<-function(postDist,predictiveMean=TRUE,quan=c(0.025,0.97
 
 marginalLikelihood<-function(obsData,meanFunc,covFunc,sigmaError,...){
   if(sigmaError<=0) stop("Value for sigmaError is not allowed!")
+  #browser()
   y<-obsData[,1]  
   x<-obsData[,2]
-  meanDiff<-as.matrix(meanFunc(x)-y)
+  meanDiff<-as.matrix(y-meanFunc(x))
   covMat<-createCovMatrix(xVal=x,covFunc=covFunc,...)+(sigmaError^2)*diag(length(x))
-  margLike<- -0.5*t(meanDiff)%*%qr.solve(covMat)%*%meanDiff-0.5*log(det(covMat))-0.5*length(x)*log(2*pi)
+  if(det(covMat)<0) return(-1e15)
   
-  cat("\n part1: ",-0.5*t(meanDiff)%*%qr.solve(covMat)%*%meanDiff, " part2: ",-0.5*log(det(covMat))," part3: ",-0.5*length(x)*log(2*pi),"\n")
+  
+  margLike<- -0.5*t(meanDiff)%*%solve(covMat)%*%meanDiff-0.5*log(det(covMat))-0.5*length(x)*log(2*pi)
+  
+  #if(!is.finite(-0.5*log(det(covMat)))) browser()
+  
+  cat("\n part1: ",-0.5*t(meanDiff)%*%qr.solve(covMat)%*%meanDiff, " part2: ",-0.5*log(det(covMat))," part3: ",-0.5*length(x)*log(2*pi),"margLike: ",margLike,"\n")
   #if(is.nan(x=log(det(covMat)))) browser()
-  
+  if(det(covMat)<1e-15) return(-1e10) #print("det(covMat=0")#
   return(margLike)
 }
 
@@ -219,16 +225,21 @@ optimMarginalLikelihood<-function(para,covFunc,...){
     names(paraList)[i]<-paraName[i]
   }
   allPara<-c(covFunc=covFunc,otherPara,paraList)
+  #print(allPara)
   print(allPara[4:length(allPara)])
   res<-do.call(marginalLikelihood,allPara)
   # we want to maximize
   
-  
-  if(res==Inf){
-    res<-100000000
-  }else if(res==-Inf){
-    res<- -100000000
-  }
+  # controll only for -inf
+#   if(res==-Inf){
+#     res<- -1e10
+#   }
+  # controll both for inf and -inf
+#   if(res==Inf){
+#     res<-100000000
+#   }else if(res==-Inf){
+#     res<- -100000000
+#   }
   cat("Value: ",as.vector(res),"\n")
   return(as.vector(res))
   #return(allPara)

@@ -42,6 +42,7 @@ curve(expr=meanWages,from=min(xGrid),to=max(xGrid),ylim=c(10,15),add=TRUE,lwd=4,
 
 #-------------------------------------------------------------
 # Kernel 1:  Squared Exponential kernel
+# optimering
 #-------------------------------------------------------------
 lowerVal<-0.001
 startValues<-c(sigmaError,priorSigma[1],priorLengthScale[1])
@@ -63,13 +64,46 @@ plotTheoreticalProbBand(postDist=postSqrExp,plotLim=c(8,17),predictiveMean=TRUE,
                         xlab="Std. age",ylab="log(wages)")
 
 #-------------------------------------------------------------
+# Other kernels
+# ej optimering
+#-------------------------------------------------------------
+
+# exp gamma:
+
+gammaSigmaError<-kernelOptim1$par[1]
+gammaSigma<-kernelOptim1$par[2]
+gammaGamma<-c(0.5,1.5)
+gammaLengthScale<-kernelOptim1$par[3]
+
+
+for(i in 1:2){
+  postGamma<-posteriorDist(xGrid=xGrid,
+                           priorMean=meanWages,obsData=wages,covFunc=gammaExponential,sigmaError=gammaSigmaError,
+                           sigma=gammaSigma,lengthScale=gammaLengthScale,gamma=gammaGamma[i])
+  plotTheoreticalProbBand(postDist=postGamma,plotLim=c(8,17),predictiveMean=TRUE,plotData=TRUE,
+                          main=paste("gamma=",round(gammaGamma[i],3) ,sep=" "),
+                          xlab="Std. age",ylab="log(wages)")
+}
+
+# matern kernel:
+
+
+SqrExpSigmaError<-kernelOptim1$par[1]
+SqrExpSigma<-kernelOptim1$par[2]
+SqrExpLengthScale<-kernelOptim1$par[3]
+
+
+
+#-------------------------------------------------------------
 # Kernel 2: Gamma exponential
+# optimering
 #-------------------------------------------------------------
 
 formals(gammaExponential)
 lowerVal<-0.01
-gamma<-1
+gamma<-0.5
 startValues2<-c(sigmaError,priorSigma[1],gamma,priorLengthScale[1])
+startValues2<-c(kernelOptim1$par[1:2],gamma,kernelOptim1$par[3])
 kernelOptim2<-optim(par=startValues2,fn=optimMarginalLikelihood,method="L-BFGS-B",
                  obsData=wages,meanFunc=meanWages,covFunc=gammaExponential,
                  lower=c(lowerVal,lowerVal,lowerVal,lowerVal),upper=c(Inf,Inf,1.99,Inf),control=list(fnscale=-1),hessian=TRUE)
@@ -93,6 +127,7 @@ plotTheoreticalProbBand(postDist=postGamma,plotLim=c(8,17),predictiveMean=TRUE,p
 
 #-------------------------------------------------------------
 # Kernel 3: maternKernel
+# optimering
 #-------------------------------------------------------------
 
 formals(maternKernel)
@@ -118,51 +153,5 @@ plotTheoreticalProbBand(postDist=postGamma,plotLim=c(8,17),predictiveMean=TRUE,p
 str(postGamma)
 #-------------------------------------------------------------
 
-
-blurFunc<-function(...){
-  return(match.call())
-}
-
-blurFunc<-function(...){
-  return(as.list(environment()))
-}
-tempf <- function(a, b = 2, ...) {
-  argg <- c(as.list(environment()), list(...))
-  print(argg)
-}
-
-
-tempf <- function(a, b = 2, ...) {
-  argg <- as.list(args(tmpfun))
-  print(argg)
-}
-tempf(a=1, b=2, d=4,c=3)
-
-tmpfun <- function(a,b,...) {
-  hej<-as.list(match.call())[-(1:2)]
-  print(hej)
-  print("--------------")
-  h<-hej[-1]
-  print(h)
-  return(hej)
-  #print(as.list(match.call(expand.dots=FALSE)))
-}
-a<-tmpfun(a=1, b=2, d=4,c=3)
-class(a)
-str(a)
-a[-1]
-tempf(1, c = 3)
-c(ex1,ex2)
-ex1<-list(a=1,b=3,c=34)
-ex2<-list(g="lkd",h=1:4)
-
-list(unlist(ex1),unlist(ex2))
-d<-blurFunc(a=1,b=2,c=3)
-append
-match.call()
-as.list(environment())
-as.list(args(tmpfun))
-dput
-Reduce
 
 
