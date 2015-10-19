@@ -76,37 +76,70 @@ createCovMatrix<-function(xVal,yVal=NULL,covFunc,...){
 
 
 # covFunc- covariance function
-# para - list with all parameters for covFunc
+# para - list with all parameters for covFunc on the form:
+#   xVal - x values to compute covariance for
+#   yVal - if cross correlations shall be computed otherwise NULL
+#   addional hyperparamters for covFunc
 
-createCovMatrix2<-function(covFunc,para){
+createCovMatrixFast<-function(covFunc,para){
   # index<-1:length(xVal)
   #   indexMat<-as.matrix(expand.grid(index,index))
   #   covValues<-covFunc(x1=indexMat[,1],x2=indexMat[,2],...)
   #   covMat<-matrix(0,length(xVal),length(xVal))
   #   covMat[indexMat]<-covValues
-  
+  xVal<-para$xVal
+  yVal<-para$yVal
   if(is.null(yVal)){
-    covMat<-matrix(NA,length(xVal),length(xVal))
-    for(i in 1:length(xVal)){
-      for(j in 1:length(xVal)){
-        if(j<=i){
-          covMat[i,j]<-covFunc(x1=xVal[i],x2=xVal[j],...)
-        }
-      } 
-    }
+    #browser()
+    rows<-length(xVal)
+    y_index <- rev(abs(sequence(seq.int(rows)) - rows) + 1)
+    x_index <- rep.int(seq.int(rows), rev(seq.int(rows)))
+    xy_index<-cbind(x_index,y_index)
+    new_x1<-xVal[xy_index[,1]]
+    new_x2<-xVal[xy_index[,2]]
+    para_func<-c(list(x1=new_x1,x2=new_x2),para[-(1:2)])
+    cov_values<-do.call(covFunc,para_func)
+    covMat<-matrix(0,rows,rows)
+    covMat[xy_index]<-cov_values
+    covMat2<-covMat
+    covMat2<-covMat2+t(covMat)
+    diag(covMat2)<-diag(covMat2)-diag(covMat)
+    return(covMat2)
   }else {
-    covMat<-matrix(0,nrow=length(yVal),ncol=length(xVal))
-    for(i in 1:length(yVal)){  # rows 
-      for(j in 1:length(xVal)){ # cols
-        covMat[i,j]<-covFunc(x1=yVal[i],x2=xVal[j],...)
-      } 
+    yl<-length(yVal)  # no of cols
+    xl<-length(xVal)  # no of rows
+    covMat<-matrix(0,nrow=xl,ncol=yl)
+    if(xl>=yl){  # loop over cols
+      for(i in 1:yl){
+        y_index <-rep(i,yl) 
+        x_index <-1:xl
+        xy_index<-cbind(x_index,y_index)
+        new_x<-xVal[xy_index[,1]]
+        new_y<-yVal[xy_index[,2]]
+        para_func<-c(list(x1=new_x,x2=new_y),para[-(1:2)])
+        covMat[,i]<-do.call(covFunc,para_func)
+      }
+    }else {  # loop over rows
+      for(i in 1:xl){
+        y_index <-1:yl
+        x_index <-rep(i,xl)
+        xy_index<-cbind(x_index,y_index)
+        new_x<-xVal[xy_index[,1]]
+        new_y<-yVal[xy_index[,2]]
+        para_func<-c(list(x1=new_x,x2=new_y),para[-(1:2)])
+        covMat[i,]<-do.call(covFunc,para_func)
+      }
     }
-    colnames(covMat)<-paste("xVal",round(xVal,3))
-    rownames(covMat)<-paste("yVal",round(yVal,3))
+    #     for(i in 1:length(yVal)){  # rows 
+    #       for(j in 1:length(xVal)){ # cols
+    #         covMat[i,j]<-covFunc(x1=yVal[i],x2=xVal[j],...)  # do.call(covFunc,para)
+    #       } 
+    #     }
+    #     colnames(covMat)<-paste("xVal",round(xVal,3))
+    #     rownames(covMat)<-paste("yVal",round(yVal,3))
+    return(t(covMat))
   }
-  return(covMat)
 }
-
 
 sampleGP<-function(noDraw,xVal,covFunc,func=NULL,onlyPara=FALSE,...){
   meanVal<-meanFunc(xVal,func=func)
@@ -235,7 +268,9 @@ marginalLikelihood<-function(obsData,meanFunc,covFunc,sigmaError,...){
   y<-obsData[,1]  
   x<-obsData[,2]
   meanDiff<-as.matrix(y-meanFunc(x))
+  #do.call
   covMat<-createCovMatrix(xVal=x,covFunc=covFunc,...)+(sigmaError^2)*diag(length(x))
+  #covMat<-createCovMatrix(xVal=x,covFunc=covFunc,...)+(sigmaError^2)*diag(length(x))
   #if(det(covMat)<0) return(-1e15)
   margLike<- -0.5*t(meanDiff)%*%solve(covMat)%*%meanDiff-0.5*log(det(covMat))-0.5*length(x)*log(2*pi)
   
