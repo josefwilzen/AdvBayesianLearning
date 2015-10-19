@@ -1,6 +1,6 @@
 rm(list=ls())
 graphics.off()
-setwd("/home/joswi05/Dropbox/Josef/Advanced Bayesian Learning/AdvBayesianLearning")
+setwd("/home/josef/Dropbox/Josef/Advanced Bayesian Learning/AdvBayesianLearning")
 source("Gaussian processes/GPfunc.R")
 # data:
 wages<-read.delim(file="Gaussian processes/CanadianWages2.csv",sep=" ")
@@ -67,6 +67,11 @@ plotTheoreticalProbBand(postDist=postSqrExp,plotLim=c(8,17),predictiveMean=TRUE,
 # Other kernels
 # ej optimering
 #-------------------------------------------------------------
+
+# model sigma: 0.533
+# sigma kernel: 0.41
+# length 0.713
+
 
 # exp gamma:
 
