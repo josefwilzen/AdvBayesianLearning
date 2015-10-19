@@ -74,6 +74,40 @@ createCovMatrix<-function(xVal,yVal=NULL,covFunc,...){
   return(covMat)
 }
 
+
+# covFunc- covariance function
+# para - list with all parameters for covFunc
+
+createCovMatrix2<-function(covFunc,para){
+  # index<-1:length(xVal)
+  #   indexMat<-as.matrix(expand.grid(index,index))
+  #   covValues<-covFunc(x1=indexMat[,1],x2=indexMat[,2],...)
+  #   covMat<-matrix(0,length(xVal),length(xVal))
+  #   covMat[indexMat]<-covValues
+  
+  if(is.null(yVal)){
+    covMat<-matrix(NA,length(xVal),length(xVal))
+    for(i in 1:length(xVal)){
+      for(j in 1:length(xVal)){
+        if(j<=i){
+          covMat[i,j]<-covFunc(x1=xVal[i],x2=xVal[j],...)
+        }
+      } 
+    }
+  }else {
+    covMat<-matrix(0,nrow=length(yVal),ncol=length(xVal))
+    for(i in 1:length(yVal)){  # rows 
+      for(j in 1:length(xVal)){ # cols
+        covMat[i,j]<-covFunc(x1=yVal[i],x2=xVal[j],...)
+      } 
+    }
+    colnames(covMat)<-paste("xVal",round(xVal,3))
+    rownames(covMat)<-paste("yVal",round(yVal,3))
+  }
+  return(covMat)
+}
+
+
 sampleGP<-function(noDraw,xVal,covFunc,func=NULL,onlyPara=FALSE,...){
   meanVal<-meanFunc(xVal,func=func)
   covMat<-createCovMatrix(xVal=xVal,covFunc=covFunc,...)
@@ -202,14 +236,12 @@ marginalLikelihood<-function(obsData,meanFunc,covFunc,sigmaError,...){
   x<-obsData[,2]
   meanDiff<-as.matrix(y-meanFunc(x))
   covMat<-createCovMatrix(xVal=x,covFunc=covFunc,...)+(sigmaError^2)*diag(length(x))
-  if(det(covMat)<0) return(-1e15)
-  
-  
+  #if(det(covMat)<0) return(-1e15)
   margLike<- -0.5*t(meanDiff)%*%solve(covMat)%*%meanDiff-0.5*log(det(covMat))-0.5*length(x)*log(2*pi)
   
   #if(!is.finite(-0.5*log(det(covMat)))) browser()
   
-  cat("\n part1: ",-0.5*t(meanDiff)%*%qr.solve(covMat)%*%meanDiff, " part2: ",-0.5*log(det(covMat))," part3: ",-0.5*length(x)*log(2*pi),"margLike: ",margLike,"\n")
+  #cat("\n part1: ",-0.5*t(meanDiff)%*%qr.solve(covMat)%*%meanDiff, " part2: ",-0.5*log(det(covMat))," part3: ",-0.5*length(x)*log(2*pi),"margLike: ",margLike,"\n")
   #if(is.nan(x=log(det(covMat)))) browser()
   if(det(covMat)<1e-15) return(-1e10) #print("det(covMat=0")#
   return(margLike)
