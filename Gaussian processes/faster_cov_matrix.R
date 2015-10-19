@@ -35,23 +35,23 @@ createCovMatrix2<-function(covFunc,para){
     diag(covMat2)<-diag(covMat2)-diag(covMat)
     return(covMat2)
   }else {
-    yl<-length(yVal)  # no of rows
-    xl<-length(xVal)  # no of cols
-    covMat<-matrix(0,nrow=yl,ncol=xl)
-    if(yl>=xl){  # loop over cols
-      for(i in 1:xl){
-        x_index <-rep(i,xl) 
-        y_index <-1:yl
-        yx_index<-cbind(y_index,x_index)
-        new_y<-xVal[yx_index[,1]]
-        new_x<-yVal[yx_index[,2]]
+    yl<-length(yVal)  # no of cols
+    xl<-length(xVal)  # no of rows
+    covMat<-matrix(0,nrow=xl,ncol=yl)
+    if(xl>=yl){  # loop over cols
+      for(i in 1:yl){
+        y_index <-rep(i,yl) 
+        x_index <-1:xl
+        xy_index<-cbind(x_index,y_index)
+        new_x<-xVal[xy_index[,1]]
+        new_y<-yVal[xy_index[,2]]
         para_func<-c(list(x1=new_x,x2=new_y),para[-(1:2)])
         covMat[,i]<-do.call(covFunc,para_func)
       }
-    }else{  # loop over rows
-      for(i in 1:yl){
-        x_index <-rep(i,xl) 
+    }else {  # loop over rows
+      for(i in 1:xl){
         y_index <-1:yl
+        x_index <-rep(i,xl)
         xy_index<-cbind(x_index,y_index)
         new_x<-xVal[xy_index[,1]]
         new_y<-yVal[xy_index[,2]]
@@ -66,7 +66,7 @@ createCovMatrix2<-function(covFunc,para){
 #     }
 #     colnames(covMat)<-paste("xVal",round(xVal,3))
 #     rownames(covMat)<-paste("yVal",round(yVal,3))
-#     return(covMat)
+    return(t(covMat))
   }
 }
 
@@ -88,11 +88,26 @@ compare<-microbenchmark(do.call(createCovMatrix2,para1),do.call(createCovMatrix,
 compare
 
 
+rows<-100
+cols<-50
+para<-list(xVal=1:rows,yVal=1:cols,lengthScale = 1,sigma = 1)
 system.time(a<-createCovMatrix2(covFunc = SqrExpCov,para = para))
-system.time(b<-createCovMatrix(xVal = 1:rows,yVal = NULL,covFunc = SqrExpCov,lengthScale = 1,sigma = 1))
+system.time(b<-createCovMatrix(xVal = 1:rows,yVal = 1:cols,covFunc = SqrExpCov,lengthScale = 1,sigma = 1))
 all(a==b)
 Matrix::image(Matrix(a),colorkey=TRUE)
 det(a)
+
+
+library(microbenchmark)
+rows<-500
+cols<-1000
+para<-list(xVal=1:rows,yVal=1:cols,lengthScale = 1,sigma = 1)
+para1<-list(covFunc = SqrExpCov,para = para)
+para2<-list(xVal = 1:rows,yVal = 1:cols,covFunc = SqrExpCov,lengthScale = 1,sigma = 1)
+#compare<-microbenchmark(do.call(createCovMatrix2,para1),do.call(createCovMatrix,para2),times = 10,unit = "s")
+compare<-microbenchmark(do.call(createCovMatrix2,para1),do.call(createCovMatrix,para2),times = 20)
+compare
+
 isSymmetric(a)
 library(MASS)
 plot(mvrnorm(n=1,mu=10*cos(c(1:rows)^2),Sigma=1*a),type="l")
